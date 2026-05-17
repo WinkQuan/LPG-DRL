@@ -10,18 +10,18 @@ import rospy
 import time
 
 import env
-import paldrl_ablation
+import lpgdrl_ablation
 
 
 MAX_STEP_PER_EPISODE = 100
-MAX_EPISODE = 100
+MAX_EPISODE = 500
 UGV_MASS = 1.48
 UGV_INERTIA = 2.4
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Validate PAL-DRL ablation variants.")
-    parser.add_argument("--variant", required=True, choices=sorted(paldrl_ablation.ABLATION_VARIANTS.keys()))
+    parser = argparse.ArgumentParser(description="Validate LPG-DRL ablation variants.")
+    parser.add_argument("--variant", required=True, choices=sorted(lpgdrl_ablation.ABLATION_VARIANTS.keys()))
     parser.add_argument("--seed", required=True, type=int)
     return parser.parse_args()
 
@@ -42,7 +42,7 @@ def write_velocity_csv(path, linear_x_values, angular_z_values):
 
 def main():
     args = parse_args()
-    variant_config = paldrl_ablation.ABLATION_VARIANTS[args.variant]
+    variant_config = lpgdrl_ablation.ABLATION_VARIANTS[args.variant]
 
     success_count = 0
     collision_count = 0
@@ -55,18 +55,18 @@ def main():
 
     gazebo_ugv = env.GazeboUGV(max_step=MAX_STEP_PER_EPISODE)
 
-    model_dir = Path("./Model/PAL-DRL-Ablation") / args.variant / f"seed_{args.seed}"
-    model = model_dir / "model_pal_drl_ablation.onnx"
-    validate_dir = Path("./Validate/PAL-DRL-Ablation") / args.variant / f"seed_{args.seed}"
-    csv_path = validate_dir / "paldrl_ablation_velocity.csv"
-    tra_path = validate_dir / "paldrl_ablation_trajectory.txt"
+    model_dir = Path("./Model/LPG-DRL-Ablation") / args.variant / f"seed_{args.seed}"
+    model = model_dir / "model_lpg_drl_ablation.onnx"
+    validate_dir = Path("./Validate/LPG-DRL-Ablation") / args.variant / f"seed_{args.seed}"
+    csv_path = validate_dir / "lpgdrl_ablation_velocity.csv"
+    tra_path = validate_dir / "lpgdrl_ablation_trajectory.txt"
     metrics_path = validate_dir / "metrics.csv"
     validate_dir.mkdir(parents=True, exist_ok=True)
 
     if not model.exists():
         raise FileNotFoundError(
             f"Expected ONNX model not found: {model.resolve()}. "
-            f"Please confirm validate_paldrl_ablation.py is pointing to the correct file."
+            f"Please confirm validate_lpgdrl_ablation.py is pointing to the correct file."
         )
 
     sess = ort.InferenceSession(str(model))

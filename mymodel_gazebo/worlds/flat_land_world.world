@@ -37,53 +37,63 @@
 		</include>
 		<include>
 			<name>unit_cylinder0</name>
-			<pose>4.43 7.36 1 0 0 0</pose>
+			<pose>4.43 7.36 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder1</name>
-			<pose>0 7.00 1 0 0 0</pose>
+			<pose>0 7.00 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder2</name>
-			<pose>5 -1 1 0 0 0</pose>
+			<pose>5 -1 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder3</name>
-			<pose>-4.46 -6.94 1 0 0 0</pose>
+			<pose>-4.46 -6.94 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder4</name>
-			<pose>2.37 2.46 1 0 0 0</pose>
+			<pose>2.37 2.46 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder5</name>
-			<pose>0.00 -3.00 1 0 0 0</pose>
+			<pose>0.00 -3.00 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder6</name>
-			<pose>-5.00 7.00 1 0 0 0</pose>
+			<pose>-5.00 7.00 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder7</name>
-			<pose>3.00 -7.00 1 0 0 0</pose>
+			<pose>3.00 -7.00 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder8</name>
-			<pose>-5.00 0.50 1 0 0 0</pose>
+			<pose>-5.00 0.50 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<include>
 			<name>unit_cylinder9</name>
-			<pose>-3 4 1 0 0 0</pose>
+			<pose>-3 4 0 0 0 0</pose>
 			<uri>model://unit_cylinder</uri>
+			<static>true</static>
 		</include>
 		<!-- 小车模型 -->
 		<include>

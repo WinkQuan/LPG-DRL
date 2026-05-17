@@ -20,35 +20,35 @@ import APF_Vel_ROS
 
 ABLATION_VARIANTS = {
     "full": {
-        "display_name": "PAL-DRL",
+        "display_name": "LPG-DRL",
         "use_dropout": True,
         "teacher_mode": "local",
         "reward_mode": "posture_aware",
         "epsilon": 0.1,
     },
     "wo_dropout": {
-        "display_name": "PAL-DRL w/o Dropout",
+        "display_name": "LPG-DRL w/o Dropout",
         "use_dropout": False,
         "teacher_mode": "local",
         "reward_mode": "posture_aware",
         "epsilon": 0.1,
     },
     "wo_local_teacher": {
-        "display_name": "PAL-DRL w/o Local APF Teacher",
+        "display_name": "LPG-DRL w/o Local APF Teacher",
         "use_dropout": True,
         "teacher_mode": "full",
         "reward_mode": "posture_aware",
         "epsilon": 0.1,
     },
     "wo_posture_reward": {
-        "display_name": "PAL-DRL w/o Posture-Aware Reward",
+        "display_name": "LPG-DRL w/o Posture-Aware Reward",
         "use_dropout": True,
         "teacher_mode": "local",
         "reward_mode": "base",
         "epsilon": 0.1,
     },
     "wo_exploration": {
-        "display_name": "PAL-DRL w/o Exploration",
+        "display_name": "LPG-DRL w/o Exploration",
         "use_dropout": True,
         "teacher_mode": "local",
         "reward_mode": "posture_aware",
@@ -106,9 +106,9 @@ class AblationReplayBuffer:
         )
 
 
-class AblationPALDRLNet(nn.Module):
+class AblationLPGDRLNet(nn.Module):
     def __init__(self, network, action_space_vx, action_space_vz, use_dropout=True):
-        super(AblationPALDRLNet, self).__init__()
+        super(AblationLPGDRLNet, self).__init__()
         self.action_space_vx = action_space_vx
         self.action_space_vz = action_space_vz
         self.network = network
@@ -168,7 +168,7 @@ class AblationPALDRLNet(nn.Module):
         return vx_output, vz_output
 
 
-class AblationPALDRLAgent:
+class AblationLPGDRLAgent:
     def __init__(
         self,
         env,
@@ -183,7 +183,7 @@ class AblationPALDRLAgent:
         epsilon=0.1,
         network="Duel",
     ):
-        super(AblationPALDRLAgent, self).__init__()
+        super(AblationLPGDRLAgent, self).__init__()
         self.env = env
         self.network = network
         self.action_space_vx = action_space_vx
@@ -196,7 +196,7 @@ class AblationPALDRLAgent:
             torch.cuda.get_device_name(torch.cuda.current_device()) if torch.cuda.is_available() else "CPU",
         )
 
-        self.predict_net = AblationPALDRLNet(
+        self.predict_net = AblationLPGDRLNet(
             network=self.network,
             action_space_vx=self.action_space_vx,
             action_space_vz=self.action_space_vz,
@@ -205,7 +205,7 @@ class AblationPALDRLAgent:
         self.optimizer = optim.Adam(self.predict_net.parameters(), lr=learning_rate)
         self.loss_fn = nn.MSELoss()
 
-        self.target_net = AblationPALDRLNet(
+        self.target_net = AblationLPGDRLNet(
             network=self.network,
             action_space_vx=self.action_space_vx,
             action_space_vz=self.action_space_vz,
@@ -224,7 +224,7 @@ class AblationPALDRLAgent:
         self.decay_counter = 0
 
         print(
-            f"Ablation PAL-DRL initialized: network={self.network}, dropout={self.use_dropout}, epsilon={self.epsilon}"
+            f"Ablation LPG-DRL initialized: network={self.network}, dropout={self.use_dropout}, epsilon={self.epsilon}"
         )
 
     def get_action(self, state1, state2, dist_normalized=None):

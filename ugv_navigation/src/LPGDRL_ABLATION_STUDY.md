@@ -1,8 +1,8 @@
-# PAL-DRL Ablation Study
+# LPG-DRL Ablation Study
 
 ## 1. 消融实验目标
 
-本节用于验证 `PAL-DRL` 各核心改进模块对最终性能提升的独立贡献。
+本节用于验证 `LPG-DRL` 各核心改进模块对最终性能提升的独立贡献。
 消融实验采用单变量消融原则：每次仅移除一个模块，其余网络结构、训练参数、验证环境、动作空间与终止条件均保持一致。
 
 本消融实验围绕以下 4 个改进点展开：
@@ -18,17 +18,17 @@
 
 | 变体 | 说明 |
 | --- | --- |
-| `PAL-DRL` | 完整模型，保留全部改进点 |
-| `PAL-DRL w/o Dropout` | 去掉 CNN 分支中的两层 `Dropout(0.1)` |
-| `PAL-DRL w/o Local APF Teacher` | 将局部可视 APF 教师替换为全障碍物 APF 教师 |
-| `PAL-DRL w/o Posture-Aware Reward` | 将奖励恢复为基础进度奖励，不包含姿态感知项 |
-| `PAL-DRL w/o Exploration` | 去掉小幅探索机制，设置 `epsilon = 0.0` |
+| `LPG-DRL` | 完整模型，保留全部改进点 |
+| `LPG-DRL w/o Dropout` | 去掉 CNN 分支中的两层 `Dropout(0.1)` |
+| `LPG-DRL w/o Local APF Teacher` | 将局部可视 APF 教师替换为全障碍物 APF 教师 |
+| `LPG-DRL w/o Posture-Aware Reward` | 将奖励恢复为基础进度奖励，不包含姿态感知项 |
+| `LPG-DRL w/o Exploration` | 去掉小幅探索机制，设置 `epsilon = 0.0` |
 
 ### 约束
 
 - 每个消融版本只移除一个模块
 - 其余训练设置全部保持一致
-- 以实际实验版本为准，姿态感知奖励视为已接入 `PAL-DRL` 主训练链路
+- 以实际实验版本为准，姿态感知奖励视为已接入 `LPG-DRL` 主训练链路
 
 ## 3. 统一实验口径
 
@@ -41,7 +41,7 @@
 - `gamma = 0.99`
 - `learning_rate = 1e-4`
 - `target_update = 4`
-- 主干网络结构与 `PAL-DRL` 主实验保持一致
+- 主干网络结构与 `LPG-DRL` 主实验保持一致
 
 ### 验证设置
 
@@ -77,29 +77,29 @@
 
 | Method | SR (%) | CR (%) | TR (%) | AS | ATL (m) | AEC (J) | APS (rad) | AET (s) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PAL-DRL | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| PAL-DRL w/o Dropout | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| PAL-DRL w/o Local APF Teacher | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| PAL-DRL w/o Posture-Aware Reward | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| PAL-DRL w/o Exploration | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Dropout | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Local APF Teacher | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Posture-Aware Reward | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Exploration | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
 
 ### LaTeX 结果表模板
 
 ```tex
 \begin{table*}[t]
 \centering
-\caption{Ablation study of PAL-DRL.}
-\label{tab:ablation_paldrl}
+\caption{Ablation study of LPG-DRL.}
+\label{tab:ablation_lpgdrl}
 \resizebox{\textwidth}{!}{
 \begin{tabular}{lcccccccc}
 \toprule
 Method & SR (\%) & CR (\%) & TR (\%) & AS & ATL (m) & AEC (J) & APS (rad) & AET (s) \\
 \midrule
-PAL-DRL & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-PAL-DRL w/o Dropout & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-PAL-DRL w/o Local APF Teacher & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-PAL-DRL w/o Posture-Aware Reward & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-PAL-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Dropout & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Local APF Teacher & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Posture-Aware Reward & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
 \bottomrule
 \end{tabular}
 }
@@ -110,11 +110,11 @@ PAL-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- 
 
 ### 6.1 消融实验设置
 
-为验证 `PAL-DRL` 各组成模块对越野导航性能提升的独立贡献，本文设计了单变量消融实验。具体而言，在完整 `PAL-DRL` 的基础上，分别移除 `Dropout` 正则、局部可视 `APF` 教师、姿态感知奖励以及小幅探索机制，构建四个消融版本，其余网络结构、训练参数、验证环境、动作空间以及终止条件保持一致。所有模型均在相同训练配置下训练 `2000` 个 episode，并在相同测试场景中验证 `100` 个 episode。为减小随机因素影响，每个模型在 `3` 个随机种子下独立重复实验，最终结果以 `mean ± std` 的形式汇报。
+为验证 `LPG-DRL` 各组成模块对越野导航性能提升的独立贡献，本文设计了单变量消融实验。具体而言，在完整 `LPG-DRL` 的基础上，分别移除 `Dropout` 正则、局部可视 `APF` 教师、姿态感知奖励以及小幅探索机制，构建四个消融版本，其余网络结构、训练参数、验证环境、动作空间以及终止条件保持一致。所有模型均在相同训练配置下训练 `2000` 个 episode，并在相同测试场景中验证 `500` 个 episode。为减小随机因素影响，每个模型在 `3` 个随机种子下独立重复实验，最终结果以 `mean ± std` 的形式汇报。
 
 ### 6.2 消融实验结果
 
-表 \ref{tab:ablation_paldrl} 给出了 `PAL-DRL` 及其四个消融版本在 `SR`、`CR`、`TR`、`AS`、`ATL`、`AEC`、`APS` 和 `AET` 八项指标上的结果。整体来看，完整 `PAL-DRL` 在各项指标上表现最优或最均衡，说明所提出的各个模块均对最终性能提升起到了积极作用。
+表 \ref{tab:ablation_lpgdrl} 给出了 `LPG-DRL` 及其四个消融版本在 `SR`、`CR`、`TR`、`AS`、`ATL`、`AEC`、`APS` 和 `AET` 八项指标上的结果。整体来看，完整 `LPG-DRL` 在各项指标上表现最优或最均衡，说明所提出的各个模块均对最终性能提升起到了积极作用。
 
 ### 6.3 结果分析
 
@@ -122,7 +122,7 @@ PAL-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- 
 
 进一步地，移除姿态感知奖励后，模型在 `APS` 指标上的退化最为显著，同时 `SR` 和 `ATL` 也出现不同程度下降，这说明姿态约束在越野场景中对于维持车体稳定性和改善整体导航性能具有重要作用。最后，去除小幅探索机制后，模型的 `SR` 降低、`AS` 与 `TR` 升高，说明适度探索有助于策略跳出局部次优行为，提高训练阶段的有效搜索能力。
 
-综上所述，`PAL-DRL` 中的 `Dropout` 正则、局部可视 `APF` 教师、姿态感知奖励以及小幅探索机制共同构成了最终性能提升的关键来源。
+综上所述，`LPG-DRL` 中的 `Dropout` 正则、局部可视 `APF` 教师、姿态感知奖励以及小幅探索机制共同构成了最终性能提升的关键来源。
 
 ## 7. 写作注意事项
 

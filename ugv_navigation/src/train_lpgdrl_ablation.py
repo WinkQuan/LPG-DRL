@@ -11,7 +11,7 @@ import rospy
 import wandb
 
 import env
-import paldrl_ablation
+import lpgdrl_ablation
 
 
 TOTAL_EPISODE = 2000
@@ -20,8 +20,8 @@ UGV_MASS = 1.48
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train PAL-DRL ablation variants.")
-    parser.add_argument("--variant", required=True, choices=sorted(paldrl_ablation.ABLATION_VARIANTS.keys()))
+    parser = argparse.ArgumentParser(description="Train LPG-DRL ablation variants.")
+    parser.add_argument("--variant", required=True, choices=sorted(lpgdrl_ablation.ABLATION_VARIANTS.keys()))
     parser.add_argument("--seed", required=True, type=int)
     return parser.parse_args()
 
@@ -35,22 +35,22 @@ def append_lines(file_path, values):
 
 def main():
     args = parse_args()
-    variant_config = paldrl_ablation.ABLATION_VARIANTS[args.variant]
-    paldrl_ablation.set_random_seed(args.seed)
+    variant_config = lpgdrl_ablation.ABLATION_VARIANTS[args.variant]
+    lpgdrl_ablation.set_random_seed(args.seed)
 
     wandb.login()
     wandb.init(
         project="OFF-ROAD-UGV",
-        name=f"PALDRL-Ablation_{args.variant}_seed{args.seed}_{time.strftime('%Y-%m-%d %H:%M:%S')}",
+        name=f"LPGDRL-Ablation_{args.variant}_seed{args.seed}_{time.strftime('%Y-%m-%d %H:%M:%S')}",
     )
 
-    model_path = os.path.join("Model", "PAL-DRL-Ablation", args.variant, f"seed_{args.seed}")
+    model_path = os.path.join("Model", "LPG-DRL-Ablation", args.variant, f"seed_{args.seed}")
     pth_path = os.path.join(model_path, "model.pth")
-    onnx_path = os.path.join(model_path, "model_pal_drl_ablation.onnx")
+    onnx_path = os.path.join(model_path, "model_lpg_drl_ablation.onnx")
     os.makedirs(model_path, exist_ok=True)
 
     gazebo_ugv = env.GazeboUGV(max_step=MAX_STEP_PER_EPISODE)
-    agent = paldrl_ablation.AblationPALDRLAgent(
+    agent = lpgdrl_ablation.AblationLPGDRLAgent(
         gazebo_ugv,
         gazebo_ugv.action_space_vx,
         gazebo_ugv.action_space_vz,
@@ -80,7 +80,7 @@ def main():
         episode_dqn_losses = []
 
         for t in range(MAX_STEP_PER_EPISODE):
-            apf_vx_index, apf_vz_index = paldrl_ablation.compute_apf_teacher_indices(
+            apf_vx_index, apf_vz_index = lpgdrl_ablation.compute_apf_teacher_indices(
                 gazebo_ugv, variant_config["teacher_mode"], UGV_MASS
             )
 
@@ -96,7 +96,7 @@ def main():
             gazebo_ugv.execute_linear_velocity(action_vx_index, action_vz_index)
             rospy.sleep(0.1)
 
-            next_state1, next_state2, terminal, reward, termination_state = paldrl_ablation.step_with_reward_mode(
+            next_state1, next_state2, terminal, reward, termination_state = lpgdrl_ablation.step_with_reward_mode(
                 gazebo_ugv, t + 1, variant_config["reward_mode"]
             )
             current_episode_reward += reward

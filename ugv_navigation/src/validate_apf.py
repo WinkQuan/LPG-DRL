@@ -4,6 +4,7 @@
 Validation script for pure APF baseline
 Tests the APF controller with the same 8 evaluation metrics as learned policies
 """
+
 from __future__ import absolute_import
 from __future__ import print_function
 import csv
@@ -15,9 +16,10 @@ import rospy
 
 import env
 import APF_Vel_ROS
+import validation_scenes
 
 max_step_per_episode = 100
-max_episode = 100
+max_episode = 500
 success_count = 0
 collision_count = 0
 timeout_count = 0
@@ -31,7 +33,8 @@ ugv_mass = 1.48  # 小车总质量 kg
 ugv_inertia = 2.4
 obs_radius = 5.0  # 障碍物影响范围半径 m
 
-validate_dir = Path("./Validate/APF")
+scene = validation_scenes.select_scene()
+validate_dir = validation_scenes.scene_validate_dir(scene, "APF")
 csv_path = validate_dir / "APF_velocity.csv"
 tra_path = validate_dir / "APF_trajectory.txt"
 metrics_path = validate_dir / "metrics.csv"
@@ -56,6 +59,7 @@ def write_velocity_csv(path, linear_x_values, angular_z_values):
 
 print("Action Space_vx = ", gazebo_ugv.action_space_vx)
 print("Action Space_vz = ", gazebo_ugv.action_space_vz)
+print(f"Output directory: {validate_dir}")
 print("=" * 50)
 print("Validating Pure APF Baseline")
 print("=" * 50)

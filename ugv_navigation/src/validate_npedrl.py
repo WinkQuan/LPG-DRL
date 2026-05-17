@@ -8,10 +8,10 @@ import numpy as np
 import time
 import env
 import onnxruntime as ort
-
+import validation_scenes
 
 max_step_per_episode = 100
-max_episode = 100
+max_episode = 500
 success_count = 0
 collision_count = 0
 timeout_count = 0
@@ -24,10 +24,11 @@ total_execution_time = 0.0
 ugv_mass = 1.48
 ugv_inertia = 2.4
 
+scene = validation_scenes.select_scene()
 gazebo_ugv = env.GazeboUGV(max_step=max_step_per_episode)
 
 model = Path("./Model/NPE-DRL/model_npe_drl.onnx")
-validate_dir = Path("./Validate/NPE-DRL")
+validate_dir = validation_scenes.scene_validate_dir(scene, "NPE-DRL")
 csv_path = validate_dir / "npedrl_velocity.csv"
 tra_path = validate_dir / "npedrl_trajectory.txt"
 metrics_path = validate_dir / "metrics.csv"
@@ -61,6 +62,7 @@ def write_velocity_csv(path, linear_x_values, angular_z_values):
 print("Action Space_vx = ", gazebo_ugv.action_space_vx)
 print("Action Space_vz = ", gazebo_ugv.action_space_vz)
 print(f"Using ONNX model: {model}")
+print(f"Output directory: {validate_dir}")
 
 for i in range(max_episode):
     state1, state2, dist_normalized = gazebo_ugv.reset()

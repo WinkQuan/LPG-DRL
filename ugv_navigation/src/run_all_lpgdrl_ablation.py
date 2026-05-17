@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""Run the full PAL-DRL ablation experiment matrix."""
+"""Run the full LPG-DRL ablation experiment matrix."""
 
 from __future__ import print_function
 
@@ -20,7 +20,7 @@ REQUIRED_GAZEBO_TOPICS = ["/gazebo/model_states", "/mycar/camera_right/image_raw
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run PAL-DRL ablation training, validation, and comparison in one command."
+        description="Run LPG-DRL ablation training, validation, and comparison in one command."
     )
     parser.add_argument(
         "--dry-run",
@@ -60,15 +60,15 @@ def parse_args():
 
 
 def model_dir_for(variant, seed):
-    return SCRIPT_DIR / "Model" / "PAL-DRL-Ablation" / variant / f"seed_{seed}"
+    return SCRIPT_DIR / "Model" / "LPG-DRL-Ablation" / variant / f"seed_{seed}"
 
 
 def validate_dir_for(variant, seed):
-    return SCRIPT_DIR / "Validate" / "PAL-DRL-Ablation" / variant / f"seed_{seed}"
+    return SCRIPT_DIR / "Validate" / "LPG-DRL-Ablation" / variant / f"seed_{seed}"
 
 
 def model_file_for(variant, seed):
-    return model_dir_for(variant, seed) / "model_pal_drl_ablation.onnx"
+    return model_dir_for(variant, seed) / "model_lpg_drl_ablation.onnx"
 
 
 def metrics_file_for(variant, seed):
@@ -201,7 +201,7 @@ def command_for(script_name, variant, seed):
 
 
 def compare_command():
-    return [sys.executable, "compare_paldrl_ablation.py"]
+    return [sys.executable, "compare_lpgdrl_ablation.py"]
 
 
 def planned_jobs(variants, seeds):
@@ -215,7 +215,7 @@ def all_default_metrics_exist():
 
 
 def print_plan(args, log_dir):
-    print_header("PAL-DRL Ablation Run Plan")
+    print_header("LPG-DRL Ablation Run Plan")
     print(f"Working directory: {SCRIPT_DIR}")
     print(f"Log directory: {log_dir}")
     print(f"Variants: {' '.join(args.variants)}")
@@ -243,7 +243,7 @@ def run_matrix(args, log_dir):
         if should_train:
             if args.force_train and model_dir_for(variant, seed).exists():
                 maybe_backup_for_force_train(variant, seed, log_dir, args.dry_run)
-            train_cmd = command_for("train_paldrl_ablation.py", variant, seed)
+            train_cmd = command_for("train_lpgdrl_ablation.py", variant, seed)
             if args.dry_run:
                 print(f"[DRY-RUN] Would run training: {display_command(train_cmd)}")
             else:
@@ -266,7 +266,7 @@ def run_matrix(args, log_dir):
             stale_validation_dir = should_train and metrics_file.exists()
             if (args.force_validate or stale_validation_dir) and validate_dir_for(variant, seed).exists():
                 maybe_backup_for_force_validate(variant, seed, log_dir, args.dry_run)
-            validate_cmd = command_for("validate_paldrl_ablation.py", variant, seed)
+            validate_cmd = command_for("validate_lpgdrl_ablation.py", variant, seed)
             if args.dry_run:
                 print(f"[DRY-RUN] Would run validation: {display_command(validate_cmd)}")
             else:
@@ -307,14 +307,14 @@ def run_comparison(args, log_dir):
                 print(f"  {metrics_file}")
         return
 
-    compare_log = log_dir / "compare_paldrl_ablation.log"
+    compare_log = log_dir / "compare_lpgdrl_ablation.log"
     run_stage("Ablation comparison", compare_command(), compare_log, args.continue_on_error)
 
 
 def main():
     args = parse_args()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_dir = SCRIPT_DIR / "Logs" / "PAL-DRL-Ablation" / timestamp
+    log_dir = SCRIPT_DIR / "Logs" / "LPG-DRL-Ablation" / timestamp
 
     print_plan(args, log_dir)
 
@@ -332,7 +332,7 @@ def main():
         return 1
 
     print_header("Done")
-    print("PAL-DRL ablation runner finished.")
+    print("LPG-DRL ablation runner finished.")
     return 0
 
 

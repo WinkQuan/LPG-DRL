@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import os
 import env
-import paldrl
+import lpgdrl
 import numpy as np
 import random
 import time
@@ -23,7 +23,7 @@ if torch.cuda.is_available():
 
 # 可视化数据工具
 wandb.login()
-wandb.init(project="OFF-ROAD-UGV", name="PAL-DRL_" + time.strftime("%Y-%m-%d %H:%M:%S"))
+wandb.init(project="OFF-ROAD-UGV", name="LPG-DRL_" + time.strftime("%Y-%m-%d %H:%M:%S"))
 
 # 设置训练总轮数、最大步长和车重
 total_episode = 2000
@@ -32,15 +32,15 @@ max_step_per_episode = 100
 ugv_mass = 1.48
 
 # 设置模型保存路径和模型文件名
-model_path = "Model/PAL-DRL/"
+model_path = "Model/LPG-DRL/"
 pth_path = model_path + "model.pth"
-onnx_path = model_path + "model_pal_drl.onnx"
+onnx_path = model_path + "model_lpg_drl.onnx"
 
 os.makedirs(model_path, exist_ok=True)
 
 # 初始化环境和智能体
 gazebo_ugv = env.GazeboUGV(max_step=max_step_per_episode)
-agent = paldrl.DQN(
+agent = lpgdrl.DQN(
     gazebo_ugv,
     gazebo_ugv.action_space_vx,
     gazebo_ugv.action_space_vz,

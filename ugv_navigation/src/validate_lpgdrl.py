@@ -8,10 +8,10 @@ import numpy as np
 import time
 import env
 import onnxruntime as ort
-
+import validation_scenes
 
 max_step_per_episode = 100
-max_episode = 100
+max_episode = 500
 success_count = 0
 collision_count = 0
 timeout_count = 0
@@ -25,19 +25,20 @@ ugv_mass = 1.48  # 小车总质量 kg
 ugv_inertia = 2.4  # 转动惯量 I (kg·m²)
 
 
+scene = validation_scenes.select_scene()
 gazebo_ugv = env.GazeboUGV(max_step=max_step_per_episode)
 ## ONNX Model for Vehicle Decision-Making ##
-model = Path("./Model/PAL-DRL/model_pal_drl.onnx")
-validate_dir = Path("./Validate/PAL-DRL")
-csv_path = validate_dir / "paldrl_velocity.csv"
-tra_path = validate_dir / "paldrl_trajectory.txt"
+model = Path("./Model/LPG-DRL/model_lpg_drl.onnx")
+validate_dir = validation_scenes.scene_validate_dir(scene, "LPG-DRL")
+csv_path = validate_dir / "lpgdrl_velocity.csv"
+tra_path = validate_dir / "lpgdrl_trajectory.txt"
 metrics_path = validate_dir / "metrics.csv"
 validate_dir.mkdir(parents=True, exist_ok=True)
 
 if not model.exists():
     raise FileNotFoundError(
         f"Expected ONNX model not found: {model.resolve()}. "
-        f"Please confirm validate_paldrl.py is pointing to the correct file."
+        f"Please confirm validate_lpgdrl.py is pointing to the correct file."
     )
 
 sess = ort.InferenceSession(str(model))
@@ -62,6 +63,7 @@ def write_velocity_csv(path, linear_x_values, angular_z_values):
 print("Action Space_vx = ", gazebo_ugv.action_space_vx)
 print("Action Space_vz = ", gazebo_ugv.action_space_vz)
 print(f"Using ONNX model: {model}")
+print(f"Output directory: {validate_dir}")
 
 for i in range(max_episode):
     state1, state2, dist_normalized = gazebo_ugv.reset()
@@ -182,7 +184,7 @@ write_dict_csv(
         "max_step_per_episode",
     ],
     {
-        "algorithm": "PAL-DRL",
+        "algorithm": "LPG-DRL",
         "success_rate_pct": success_rate * 100,
         "collision_rate_pct": collision_rate * 100,
         "timeout_rate_pct": timeout_rate * 100,

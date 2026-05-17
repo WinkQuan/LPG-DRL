@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
-Compare real validation metrics across PAL-DRL, NPE-DRL, D3QN, BC, DAgger, and APF.
+Compare real validation metrics across LPG-DRL, NPE-DRL, D3QN, PPO, BC, DAgger, and APF.
 """
 
 import csv
@@ -10,9 +10,9 @@ from pathlib import Path
 
 ALGORITHM_SPECS = [
     {
-        "algorithm": "PAL-DRL",
-        "metrics_path": Path("./Validate/PAL-DRL/metrics.csv"),
-        "validate_cmd": "python validate_paldrl.py",
+        "algorithm": "LPG-DRL",
+        "metrics_path": Path("./Validate/LPG-DRL/metrics.csv"),
+        "validate_cmd": "python validate_lpgdrl.py",
     },
     {
         "algorithm": "NPE-DRL",
@@ -23,6 +23,11 @@ ALGORITHM_SPECS = [
         "algorithm": "D3QN",
         "metrics_path": Path("./Validate/D3QN/metrics.csv"),
         "validate_cmd": "python validate_d3qn.py",
+    },
+    {
+        "algorithm": "PPO",
+        "metrics_path": Path("./Validate/PPO/metrics.csv"),
+        "validate_cmd": "python validate_ppo.py",
     },
     {
         "algorithm": "BC",

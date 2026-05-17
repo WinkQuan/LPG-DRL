@@ -4,7 +4,7 @@
 
 This repository is a ROS/Gazebo simulation workspace for off-road unmanned ground vehicle (UGV) navigation and path-planning experiments.
 
-The main research algorithm in this project is `PAL-DRL`. The workspace also includes several comparison baselines:
+The main research algorithm in this project is `LPG-DRL`. The workspace also includes several comparison baselines:
 
 - `NPE-DRL`
 - `D3QN`
@@ -77,17 +77,18 @@ World descriptions:
 
 | Algorithm | Role | Description |
 | --- | --- | --- |
-| `PAL-DRL` | Main method | APF-guided deep reinforcement learning method used as the primary research algorithm. |
-| `NPE-DRL` | Baseline | Precursor baseline of `PAL-DRL`, used as a direct comparison target. |
+| `LPG-DRL` | Main method | APF-guided deep reinforcement learning method used as the primary research algorithm. |
+| `NPE-DRL` | Baseline | Precursor baseline of `LPG-DRL`, used as a direct comparison target. |
 | `D3QN` | Baseline | Pure dueling double deep Q-network baseline without APF supervision. |
+| `PPO` | Baseline | Pure proximal policy optimization baseline without APF supervision. |
 | `BC` | Baseline | Behavior cloning from APF expert demonstrations. |
 | `DAgger` | Baseline | Dataset aggregation with policy rollouts relabeled by the APF expert. |
 | `APF` | Baseline | Pure artificial potential field controller. |
 
 Notes:
 
-- `PAL-DRL` is the main algorithm of the project.
-- `NPE-DRL` is the precursor baseline of `PAL-DRL`.
+- `LPG-DRL` is the main algorithm of the project.
+- `NPE-DRL` is the precursor baseline of `LPG-DRL`.
 - `BC` and `DAgger` use APF as expert supervision.
 - The comparison baselines that use APF are configured with full-obstacle APF using `gazebo_ugv.cylinder_pos`.
 
@@ -102,9 +103,10 @@ cd ugv_navigation/src
 Training entrypoints:
 
 ```bash
-python train_paldrl.py
+python train_lpgdrl.py
 python train_npedrl.py
 python train_d3qn.py
+python train_ppo.py
 python train_bc.py
 python train_dagger.py
 ```
@@ -118,9 +120,10 @@ Validation entrypoints:
 ```bash
 cd ugv_navigation/src
 
-python validate_paldrl.py
+python validate_lpgdrl.py
 python validate_npedrl.py
 python validate_d3qn.py
+python validate_ppo.py
 python validate_bc.py
 python validate_dagger.py
 python validate_apf.py
@@ -131,7 +134,7 @@ Each validation script writes `metrics.csv` to `Validate/<Algorithm>/`.
 
 `algorithm_comparison.py` aggregates validation metrics from:
 
-- `PAL-DRL`
+- `LPG-DRL`
 - `NPE-DRL`
 - `D3QN`
 - `BC`

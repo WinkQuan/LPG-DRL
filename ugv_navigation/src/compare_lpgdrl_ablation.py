@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-import paldrl_ablation
+import lpgdrl_ablation
 
 
 VARIANT_ORDER = ["full", "wo_dropout", "wo_local_teacher", "wo_posture_reward", "wo_exploration"]
@@ -54,7 +54,7 @@ def summarize_variant(variant):
     metrics_rows = []
     missing = []
     for seed in SEED_ORDER:
-        metrics_path = Path("./Validate/PAL-DRL-Ablation") / variant / f"seed_{seed}" / "metrics.csv"
+        metrics_path = Path("./Validate/LPG-DRL-Ablation") / variant / f"seed_{seed}" / "metrics.csv"
         if not metrics_path.exists():
             missing.append((variant, seed, metrics_path))
             continue
@@ -114,7 +114,7 @@ def print_table(rows):
 
 def main():
     print("=" * 100)
-    print("PAL-DRL Ablation Comparison")
+    print("LPG-DRL Ablation Comparison")
     print("=" * 100)
 
     missing_items = []
@@ -126,7 +126,7 @@ def main():
         if not variant_rows:
             continue
 
-        display_name = paldrl_ablation.ABLATION_VARIANTS[variant]["display_name"]
+        display_name = lpgdrl_ablation.ABLATION_VARIANTS[variant]["display_name"]
         metric_values = {}
         for column in METRIC_COLUMNS:
             metric_values[column] = np.array([float(row[column]) for row in variant_rows], dtype=np.float32)
@@ -157,14 +157,14 @@ def main():
         print("\nMissing results:")
         for variant, seed, metrics_path in missing_items:
             print(f"  {variant} seed {seed}: missing {metrics_path}")
-            print(f"    python train_paldrl_ablation.py --variant {variant} --seed {seed}")
-            print(f"    python validate_paldrl_ablation.py --variant {variant} --seed {seed}")
+            print(f"    python train_lpgdrl_ablation.py --variant {variant} --seed {seed}")
+            print(f"    python validate_lpgdrl_ablation.py --variant {variant} --seed {seed}")
 
     if not summary_rows:
         print("\nNo ablation metrics.csv files were found. Run the ablation training/validation scripts first.")
         return
 
-    output_dir = Path("./Validate/PAL-DRL-Ablation")
+    output_dir = Path("./Validate/LPG-DRL-Ablation")
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "ablation_comparison.csv"
     md_path = output_dir / "ablation_comparison.md"
