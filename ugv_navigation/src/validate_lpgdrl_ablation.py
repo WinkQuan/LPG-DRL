@@ -47,6 +47,7 @@ def main():
     success_count = 0
     collision_count = 0
     timeout_count = 0
+    out_count = 0
     step_count = 0
     total_trajectory_length = 0.0
     total_energy_consumption = 0.0
@@ -148,6 +149,7 @@ def main():
                     timeout_count += 1
                     print("  ⏱ Timeout!")
                 elif termination_state == "out":
+                    out_count += 1
                     print("  ✗ Out of bounds!")
                 break
             state1 = next_state1
@@ -156,6 +158,7 @@ def main():
     success_rate = success_count / MAX_EPISODE
     collision_rate = collision_count / MAX_EPISODE
     timeout_rate = timeout_count / MAX_EPISODE
+    out_of_bounds_rate = out_count / MAX_EPISODE
 
     if success_count > 0:
         average_step = step_count / success_count
@@ -174,6 +177,7 @@ def main():
     print(f"Success Rate: {success_rate * 100:.2f}%")
     print(f"Collision Rate: {collision_rate * 100:.2f}%")
     print(f"Timeout Rate: {timeout_rate * 100:.2f}%")
+    print(f"Out-of-bounds Rate: {out_of_bounds_rate * 100:.2f}%")
     print(f"Average Time Step: {average_step:.0f}")
     print(f"Average Trajectory Length: {average_trajectory_length:.2f} m")
     print(f"Average Energy Consumption: {average_energy_consumption:.2f} J")
@@ -189,6 +193,7 @@ def main():
             "success_rate_pct",
             "collision_rate_pct",
             "timeout_rate_pct",
+            "out_of_bounds_rate_pct",
             "average_step",
             "average_trajectory_length_m",
             "average_energy_consumption_j",
@@ -204,6 +209,7 @@ def main():
             "success_rate_pct": success_rate * 100,
             "collision_rate_pct": collision_rate * 100,
             "timeout_rate_pct": timeout_rate * 100,
+            "out_of_bounds_rate_pct": out_of_bounds_rate * 100,
             "average_step": average_step,
             "average_trajectory_length_m": average_trajectory_length,
             "average_energy_consumption_j": average_energy_consumption,

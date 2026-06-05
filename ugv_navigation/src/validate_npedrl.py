@@ -8,6 +8,7 @@ import numpy as np
 import time
 import env
 import onnxruntime as ort
+import validation_episode_recorder
 import validation_scenes
 
 max_step_per_episode = 100
@@ -15,6 +16,7 @@ max_episode = 500
 success_count = 0
 collision_count = 0
 timeout_count = 0
+out_count = 0
 step_count = 0
 total_trajectory_length = 0.0
 total_energy_consumption = 0.0
@@ -33,6 +35,8 @@ csv_path = validate_dir / "npedrl_velocity.csv"
 tra_path = validate_dir / "npedrl_trajectory.txt"
 metrics_path = validate_dir / "metrics.csv"
 validate_dir.mkdir(parents=True, exist_ok=True)
+episode_recorder = validation_episode_recorder.FirstSuccessEpisodeRecorder(scene, "NPE-DRL", validate_dir)
+validation_episode_recorder.remove_stale_outputs(csv_path, tra_path)
 
 if not model.exists():
     raise FileNotFoundError(
@@ -65,7 +69,9 @@ print(f"Using ONNX model: {model}")
 print(f"Output directory: {validate_dir}")
 
 for i in range(max_episode):
+    episode_recorder.start_episode(i + 1)
     state1, state2, dist_normalized = gazebo_ugv.reset()
+    episode_recorder.mark_episode_start_from_next_image()
     print("dist_normalized = ", dist_normalized)
     rospy.sleep(0.1)
     episode_start_time = time.time()
@@ -113,8 +119,9 @@ for i in range(max_episode):
         next_state1, next_state2, terminal, reward, termination_state = gazebo_ugv.step(time_step=t + 1)
         if terminal:
             if termination_state == "arrival":
-                np.savetxt(str(tra_path), ugv_pos_list)
-                write_velocity_csv(csv_path, linear_x_values, angular_z_values)
+                if not episode_recorder.has_saved_success:
+                    np.savetxt(str(tra_path), ugv_pos_list)
+                    write_velocity_csv(csv_path, linear_x_values, angular_z_values)
                 success_count += 1
                 step_count += t + 1
                 total_trajectory_length += episode_trajectory_length
@@ -133,14 +140,18 @@ for i in range(max_episode):
                 timeout_count += 1
                 print("Timeout!")
             elif termination_state == "out":
+                out_count += 1
                 print("Out of bounds!")
+            episode_recorder.finish_episode(success=termination_state == "arrival")
             break
         state1 = next_state1
         state2 = next_state2
+    episode_recorder.finish_episode(success=False)
 
 success_rate = success_count / max_episode
 collision_rate = collision_count / max_episode
 timeout_rate = timeout_count / max_episode
+out_of_bounds_rate = out_count / max_episode
 
 if success_count > 0:
     average_step = step_count / success_count
@@ -159,11 +170,13 @@ else:
 print("Success Rate: {:.2f}%".format(success_rate * 100))
 print("Collision Rate: {:.2f}%".format(collision_rate * 100))
 print("Timeout Rate: {:.2f}%".format(timeout_rate * 100))
+print("Out-of-bounds Rate: {:.2f}%".format(out_of_bounds_rate * 100))
 print("Average Time Step: {:.0f}".format(average_step))
 print("Average Trajectory Length: {:.2f}".format(average_trajectory_length))
 print("Average Energy Consumption: {:.2f}".format(average_energy_consumption))
 print("Average Posture Stability: {:.4f}".format(average_posture_stability))
 print("Average Execution Time: {:.3f} s".format(average_execution_time))
+episode_recorder.print_summary()
 
 write_dict_csv(
     metrics_path,
@@ -172,6 +185,7 @@ write_dict_csv(
         "success_rate_pct",
         "collision_rate_pct",
         "timeout_rate_pct",
+        "out_of_bounds_rate_pct",
         "average_step",
         "average_trajectory_length_m",
         "average_energy_consumption_j",
@@ -185,6 +199,7 @@ write_dict_csv(
         "success_rate_pct": success_rate * 100,
         "collision_rate_pct": collision_rate * 100,
         "timeout_rate_pct": timeout_rate * 100,
+        "out_of_bounds_rate_pct": out_of_bounds_rate * 100,
         "average_step": average_step,
         "average_trajectory_length_m": average_trajectory_length,
         "average_energy_consumption_j": average_energy_consumption,

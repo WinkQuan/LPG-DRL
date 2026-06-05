@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import math
 from collections import deque
 
 import numpy as np
@@ -14,42 +15,56 @@ import torch.optim as optim
 from torch.distributions import Categorical
 
 
-torch.autograd.set_detect_anomaly(True)
+if os.environ.get("PPO_DETECT_ANOMALY") == "1":
+    torch.autograd.set_detect_anomaly(True)
 
 
 class RolloutBuffer:
     def __init__(self, max_size=100000):
         self.max_size = max_size
         self.memory = deque(maxlen=self.max_size)
+        self.path_ends = []
+        self._last_finished_index = 0
 
     def add(self, state1, state2, action_vx, action_vz, log_prob_vx, log_prob_vz, reward, done, value):
         self.memory.append((state1, state2, action_vx, action_vz, log_prob_vx, log_prob_vz, reward, done, value))
 
+    def finish_path(self, next_value=0.0):
+        end_index = len(self.memory)
+        if end_index == self._last_finished_index:
+            return
+        self.path_ends.append((end_index, float(next_value)))
+        self._last_finished_index = end_index
+
     def clear(self):
         self.memory.clear()
+        self.path_ends.clear()
+        self._last_finished_index = 0
 
     def __len__(self):
         return len(self.memory)
 
-    def sample_tensors(self, device):
+    def sample_tensors(self):
         states1, states2, action_vx, action_vz, log_prob_vx, log_prob_vz, rewards, dones, values = zip(*self.memory)
         return {
-            "states1": torch.FloatTensor(np.stack(states1)).to(device),
-            "states2": torch.FloatTensor(np.stack(states2)).to(device),
-            "action_vx": torch.LongTensor(np.asarray(action_vx)).to(device),
-            "action_vz": torch.LongTensor(np.asarray(action_vz)).to(device),
-            "old_log_probs": torch.FloatTensor(np.asarray(log_prob_vx) + np.asarray(log_prob_vz)).to(device),
+            "states1": np.stack(states1),
+            "states2": np.asarray(states2, dtype=np.float32),
+            "action_vx": np.asarray(action_vx, dtype=np.int64),
+            "action_vz": np.asarray(action_vz, dtype=np.int64),
+            "old_log_probs": np.asarray(log_prob_vx, dtype=np.float32) + np.asarray(log_prob_vz, dtype=np.float32),
             "rewards": np.asarray(rewards, dtype=np.float32),
             "dones": np.asarray(dones, dtype=np.float32),
             "values": np.asarray(values, dtype=np.float32),
+            "path_ends": list(self.path_ends),
         }
 
 
 class PPONet(nn.Module):
-    def __init__(self, action_space_vx, action_space_vz):
+    def __init__(self, action_space_vx, action_space_vz, normalize_state2=True):
         super(PPONet, self).__init__()
         self.action_space_vx = action_space_vx
         self.action_space_vz = action_space_vz
+        self.normalize_state2 = normalize_state2
 
         self.fc_target = nn.Linear(2, 64)
         self.cnn_a = nn.Sequential(
@@ -64,12 +79,30 @@ class PPONet(nn.Module):
         self.output_vx = nn.Linear(256, len(self.action_space_vx))
         self.output_vz = nn.Linear(256, len(self.action_space_vz))
         self.value_head = nn.Linear(256, 1)
+        self._init_weights()
+
+    def _init_weights(self):
+        relu_gain = nn.init.calculate_gain("relu")
+        for module in self.modules():
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
+                nn.init.orthogonal_(module.weight, gain=relu_gain)
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0.0)
+
+        for policy_head in (self.output_vx, self.output_vz):
+            nn.init.orthogonal_(policy_head.weight, gain=0.01)
+            nn.init.constant_(policy_head.bias, 0.0)
+
+        nn.init.orthogonal_(self.value_head.weight, gain=1.0)
+        nn.init.constant_(self.value_head.bias, 0.0)
 
     def forward(self, state1, state2):
         batch_size = state1.size(0)
         img = state1 / 255
         x3 = self.cnn_a(img.transpose(1, 3))
 
+        if self.normalize_state2:
+            state2 = state2 / state2.new_tensor([30.0, math.pi])
         x_target = F.relu(self.fc_target(state2))
         x_merge = torch.cat((x3.view(batch_size, -1), x_target), axis=1)
         fc_1 = F.relu(self.fc_1(x_merge))
@@ -107,6 +140,9 @@ class PPO:
         update_epochs=4,
         max_grad_norm=0.5,
         memory_size=100000,
+        target_kl=0.03,
+        use_value_clip=True,
+        normalize_state2=True,
     ):
         super(PPO, self).__init__()
         self.env = env
@@ -119,7 +155,11 @@ class PPO:
             torch.cuda.get_device_name(torch.cuda.current_device()) if torch.cuda.is_available() else "CPU",
         )
 
-        self.policy = PPONet(action_space_vx=self.action_space_vx, action_space_vz=self.action_space_vz).to(self.device)
+        self.policy = PPONet(
+            action_space_vx=self.action_space_vx,
+            action_space_vz=self.action_space_vz,
+            normalize_state2=normalize_state2,
+        ).to(self.device)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.rollout_buffer = RolloutBuffer(memory_size)
 
@@ -131,6 +171,9 @@ class PPO:
         self.value_coef = value_coef
         self.update_epochs = update_epochs
         self.max_grad_norm = max_grad_norm
+        self.target_kl = target_kl
+        self.use_value_clip = use_value_clip
+        self.normalize_state2 = normalize_state2
         print("PPO Baseline Initialized")
 
     def get_action(self, state1, state2, deterministic=False):
@@ -178,63 +221,110 @@ class PPO:
         entropy = dist_vx.entropy() + dist_vz.entropy()
         return log_probs, entropy, values
 
-    def compute_returns_and_advantages(self, rewards, dones, values, next_value):
+    def compute_returns_and_advantages(self, rewards, dones, values, next_value, path_ends=None):
         advantages = np.zeros_like(rewards, dtype=np.float32)
-        gae = 0.0
 
-        for step in reversed(range(len(rewards))):
-            if step == len(rewards) - 1:
-                next_non_terminal = 1.0 - dones[step]
-                next_values = next_value
-            else:
-                next_non_terminal = 1.0 - dones[step]
-                next_values = values[step + 1]
+        if path_ends is None:
+            path_ends = []
+        path_ends = list(path_ends)
+        if not path_ends or path_ends[-1][0] < len(rewards):
+            path_ends.append((len(rewards), float(next_value)))
 
-            delta = rewards[step] + self.gamma * next_values * next_non_terminal - values[step]
-            gae = delta + self.gamma * self.gae_lambda * next_non_terminal * gae
-            advantages[step] = gae
+        path_start = 0
+        for path_end, bootstrap_value in path_ends:
+            gae = 0.0
+            for step in reversed(range(path_start, path_end)):
+                if step == path_end - 1:
+                    next_non_terminal = 1.0 - dones[step]
+                    next_values = bootstrap_value
+                else:
+                    next_non_terminal = 1.0 - dones[step]
+                    next_values = values[step + 1]
+
+                delta = rewards[step] + self.gamma * next_values * next_non_terminal - values[step]
+                gae = delta + self.gamma * self.gae_lambda * next_non_terminal * gae
+                advantages[step] = gae
+            path_start = path_end
 
         returns = advantages + values
         return returns, advantages
+
+    def _batch_tensor(self, array, batch_indices, dtype):
+        return torch.as_tensor(array[batch_indices], dtype=dtype, device=self.device)
+
+    @staticmethod
+    def _explained_variance(pred_values, returns):
+        returns_variance = torch.var(returns, unbiased=False)
+        if returns_variance.item() < 1e-8:
+            return 0.0
+        return float((1.0 - torch.var(returns - pred_values, unbiased=False) / returns_variance).item())
 
     def learn(self, next_value=0.0):
         if len(self.rollout_buffer) == 0:
             return None
 
         self.policy.train()
-        tensors = self.rollout_buffer.sample_tensors(self.device)
+        tensors = self.rollout_buffer.sample_tensors()
         returns, advantages = self.compute_returns_and_advantages(
-            tensors["rewards"], tensors["dones"], tensors["values"], next_value
+            tensors["rewards"],
+            tensors["dones"],
+            tensors["values"],
+            next_value,
+            tensors["path_ends"],
         )
 
-        returns = torch.FloatTensor(returns).to(self.device)
-        advantages = torch.FloatTensor(advantages).to(self.device)
+        returns = torch.as_tensor(returns, dtype=torch.float32)
+        advantages = torch.as_tensor(advantages, dtype=torch.float32)
         if advantages.numel() > 1:
             advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
 
-        num_samples = tensors["states1"].size(0)
+        old_values = torch.as_tensor(tensors["values"], dtype=torch.float32)
+        num_samples = tensors["states1"].shape[0]
         batch_size = min(self.batch_size, num_samples)
         loss_summaries = []
+        stop_training = False
 
         for _ in range(self.update_epochs):
-            indices = torch.randperm(num_samples, device=self.device)
+            indices = np.random.permutation(num_samples)
             for start in range(0, num_samples, batch_size):
                 batch_indices = indices[start : start + batch_size]
+                batch_tensor_indices = torch.as_tensor(batch_indices, dtype=torch.long)
+                states1_batch = self._batch_tensor(tensors["states1"], batch_indices, torch.float32)
+                states2_batch = self._batch_tensor(tensors["states2"], batch_indices, torch.float32)
+                action_vx_batch = self._batch_tensor(tensors["action_vx"], batch_indices, torch.long)
+                action_vz_batch = self._batch_tensor(tensors["action_vz"], batch_indices, torch.long)
+                old_log_probs_batch = self._batch_tensor(tensors["old_log_probs"], batch_indices, torch.float32)
+                returns_batch = returns[batch_tensor_indices].to(self.device)
+                advantages_batch = advantages[batch_tensor_indices].to(self.device)
+                old_values_batch = old_values[batch_tensor_indices].to(self.device)
 
                 log_probs, entropy, values = self.evaluate_actions(
-                    tensors["states1"][batch_indices],
-                    tensors["states2"][batch_indices],
-                    tensors["action_vx"][batch_indices],
-                    tensors["action_vz"][batch_indices],
+                    states1_batch,
+                    states2_batch,
+                    action_vx_batch,
+                    action_vz_batch,
                 )
 
-                ratio = torch.exp(log_probs - tensors["old_log_probs"][batch_indices])
-                surr1 = ratio * advantages[batch_indices]
-                surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * advantages[batch_indices]
+                log_ratio = log_probs - old_log_probs_batch
+                ratio = torch.exp(log_ratio)
+                surr1 = ratio * advantages_batch
+                surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * advantages_batch
                 policy_loss = -torch.min(surr1, surr2).mean()
-                value_loss = F.mse_loss(values, returns[batch_indices])
+                if self.use_value_clip:
+                    values_clipped = old_values_batch + torch.clamp(
+                        values - old_values_batch,
+                        -self.clip_eps,
+                        self.clip_eps,
+                    )
+                    value_loss_unclipped = (values - returns_batch).pow(2)
+                    value_loss_clipped = (values_clipped - returns_batch).pow(2)
+                    value_loss = torch.max(value_loss_unclipped, value_loss_clipped).mean()
+                else:
+                    value_loss = F.mse_loss(values, returns_batch)
                 entropy_loss = entropy.mean()
                 loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+                approx_kl = ((ratio - 1.0) - log_ratio).mean()
+                clip_fraction = ((ratio - 1.0).abs() > self.clip_eps).float().mean()
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -247,8 +337,28 @@ class PPO:
                         float(value_loss.item()),
                         float(entropy_loss.item()),
                         float(loss.item()),
+                        float(approx_kl.detach().item()),
+                        float(clip_fraction.detach().item()),
                     )
                 )
+
+                if self.target_kl is not None and float(approx_kl.detach().item()) > self.target_kl:
+                    stop_training = True
+                    break
+            if stop_training:
+                break
+
+        self.policy.eval()
+        with torch.no_grad():
+            predicted_values = []
+            for start in range(0, num_samples, batch_size):
+                batch_indices = np.arange(start, min(start + batch_size, num_samples))
+                states1_batch = self._batch_tensor(tensors["states1"], batch_indices, torch.float32)
+                states2_batch = self._batch_tensor(tensors["states2"], batch_indices, torch.float32)
+                _, _, values = self.policy(states1_batch, states2_batch)
+                predicted_values.append(values.cpu())
+            predicted_values = torch.cat(predicted_values)
+        explained_variance = self._explained_variance(predicted_values, returns)
 
         self.rollout_buffer.clear()
         mean_losses = np.asarray(loss_summaries, dtype=np.float32).mean(axis=0)
@@ -257,6 +367,9 @@ class PPO:
             "value_loss": float(mean_losses[1]),
             "entropy": float(mean_losses[2]),
             "total_loss": float(mean_losses[3]),
+            "approx_kl": float(mean_losses[4]),
+            "clip_fraction": float(mean_losses[5]),
+            "explained_variance": float(explained_variance),
         }
 
     def save_model(self, path):
@@ -265,6 +378,9 @@ class PPO:
             "optimizer_states": self.optimizer.state_dict(),
             "action_space_vx": self.action_space_vx,
             "action_space_vz": self.action_space_vz,
+            "normalize_state2": self.normalize_state2,
+            "use_value_clip": self.use_value_clip,
+            "target_kl": self.target_kl,
         }
         torch.save(checkpoint, path)
 

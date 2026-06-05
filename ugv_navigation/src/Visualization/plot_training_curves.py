@@ -25,20 +25,21 @@ DEFAULT_SUCCESS_CSV = SCRIPT_DIR / "success  rate.csv"
 DEFAULT_REWARD_OUTPUT = SCRIPT_DIR / "reward_curve.pdf"
 DEFAULT_SUCCESS_OUTPUT = SCRIPT_DIR / "success_rate_curve.pdf"
 DEFAULT_MAX_STEP = 2000.0
-DEFAULT_SMOOTH_WINDOW = 50
+DEFAULT_SMOOTH_WINDOW = 100
 DEFAULT_FIGURE_WIDTH_IN = 3.5
 DEFAULT_FIGURE_HEIGHT_IN = 2.45
 SVG_UNITS_PER_IN = 144
 SUCCESS_RATE_BOUNDS = (0.0, 1.0)
-SVG_Y_LABEL_X = 25
-PDF_Y_LABEL_X = 16.0
+SVG_AXIS_LABEL_OFFSET = 22
+PDF_AXIS_LABEL_OFFSET = 15.5
 
-ALGORITHM_ORDER = ["LPG-DRL", "NPE-DRL", "D3QN", "PPO", "BC", "DAgger", "APF"]
+ALGORITHM_ORDER = ["LPG-DRL", "NPE-DRL", "D3QN", "D3QN-LfD", "BC", "DAgger", "APF"]
+EXCLUDED_ALGORITHMS = {"PPO"}
 COLORS = {
     "LPG-DRL": "#d62728",
     "NPE-DRL": "#ff7f0e",
     "D3QN": "#1f77b4",
-    "PPO": "#9467bd",
+    "D3QN-LfD": "#1f77b4",
     "BC": "#2ca02c",
     "DAgger": "#8c564b",
     "APF": "#7f7f7f",
@@ -177,6 +178,7 @@ def ordered_labels(*series_groups):
     labels = set()
     for series in series_groups:
         labels.update(series.keys())
+    labels -= EXCLUDED_ALGORITHMS
 
     ordered = [label for label in ALGORITHM_ORDER if label in labels]
     ordered.extend(sorted(label for label in labels if label not in ordered))
@@ -200,7 +202,7 @@ def plot_metric(ax, series, labels, title, y_label, x_max, y_bounds=None):
         )
 
     ax.set_title(title, fontsize=8)
-    ax.set_xlabel("Episode")
+    ax.set_xlabel("Episode", labelpad=1)
     ax.set_ylabel(y_label, labelpad=1)
     ax.set_xlim(0, x_max)
     if y_bounds is not None:
@@ -318,10 +320,7 @@ def pdf_polyline(points, width=0.6, color=(0.0, 0.0, 0.0)):
 
 
 def pdf_rect(x, y, width, height):
-    return (
-        f"0 0 0 RG 0.5 w {pdf_number(x)} {pdf_number(y)} {pdf_number(width)} "
-        f"{pdf_number(height)} re S\n"
-    )
+    return f"0 0 0 RG 0.5 w {pdf_number(x)} {pdf_number(y)} {pdf_number(width)} " f"{pdf_number(height)} re S\n"
 
 
 def pdf_scaled_points(steps, values, x_min, x_max, y_min, y_max, box):
@@ -364,10 +363,7 @@ def write_pdf(output_path, content, width_pt, height_pt):
     for offset in offsets[1:]:
         chunks.append(f"{offset:010d} 00000 n\n".encode("ascii"))
     chunks.append(
-        (
-            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
-            f"startxref\n{xref_offset}\n%%EOF\n"
-        ).encode("ascii")
+        (f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n" f"startxref\n{xref_offset}\n%%EOF\n").encode("ascii")
     )
     output_path.write_bytes(b"".join(chunks))
 
@@ -394,7 +390,7 @@ def svg_axis(svg, title, y_label, series, labels, x_bounds, y_bounds, box):
 
     if title:
         svg.append(svg_text(left + width / 2, top - 16, title, size=10, anchor="middle", weight="bold"))
-    svg.append(svg_rotated_text(SVG_Y_LABEL_X, top + height / 2, y_label, size=8))
+    svg.append(svg_rotated_text(left - SVG_AXIS_LABEL_OFFSET, top + height / 2, y_label, size=8))
     svg.append(f'<rect x="{left}" y="{top}" width="{width}" height="{height}" fill="#fff" stroke="#222"/>')
 
     for tick in range(6):
@@ -433,9 +429,10 @@ def write_metric_svg(
 ):
     width = int(round(figure_width_in * SVG_UNITS_PER_IN))
     height = int(round(figure_height_in * SVG_UNITS_PER_IN))
-    plot_left = 44
-    plot_top = 82
-    plot_box = (plot_left, plot_top, width - plot_left - 18, height - plot_top - 48)
+    plot_margin = 32
+    plot_left = plot_margin
+    plot_top = 54
+    plot_box = (plot_left, plot_top, width - plot_left - 10, height - plot_top - plot_margin)
     x_bounds = (0.0, x_max)
     y_bounds = y_bounds or metric_bounds(series)
 
@@ -448,21 +445,28 @@ def write_metric_svg(
         svg_text(width / 2, 18, title, size=11, anchor="middle", weight="bold"),
     ]
 
-    legend_x = plot_left
-    legend_y = 39
-    legend_columns = 3
-    legend_column_width = (plot_box[2] - 4) / legend_columns
-    for index, label in enumerate(labels):
-        x = legend_x + (index % legend_columns) * legend_column_width
-        y = legend_y + (index // legend_columns) * 15
+    legend_y = 38
+    legend_font_size = 7.5
+    legend_line_width = 16
+    legend_text_gap = 5
+    legend_item_gap = 16
+    legend_item_widths = [
+        legend_line_width + legend_text_gap + len(str(label)) * legend_font_size * 0.5 for label in labels
+    ]
+    legend_width = sum(legend_item_widths) + legend_item_gap * max(0, len(labels) - 1)
+    legend_x = max(4, width / 2 - legend_width / 2)
+    for label, item_width in zip(labels, legend_item_widths):
+        x = legend_x
+        y = legend_y
         svg.append(
-            f'<line x1="{x:.2f}" y1="{y}" x2="{x + 16:.2f}" y2="{y}" '
+            f'<line x1="{x:.2f}" y1="{y}" x2="{x + legend_line_width:.2f}" y2="{y}" '
             f'stroke="{COLORS.get(label, "#333")}" stroke-width="2"/>'
         )
-        svg.append(svg_text(x + 21, y + 3, label, size=7.5))
+        svg.append(svg_text(x + legend_line_width + legend_text_gap, y + 3, label, size=legend_font_size))
+        legend_x += item_width + legend_item_gap
 
     svg_axis(svg, "", y_label, series, labels, x_bounds, y_bounds, plot_box)
-    svg.append(svg_text(width / 2, height - 10, "Episode", size=8, anchor="middle"))
+    svg.append(svg_text(width / 2, plot_top + plot_box[3] + SVG_AXIS_LABEL_OFFSET, "Episode", size=8, anchor="middle"))
     svg.append("</svg>")
 
     output_path.write_text("\n".join(svg), encoding="utf-8")
@@ -481,9 +485,10 @@ def write_metric_pdf(
 ):
     width = figure_width_in * 72.0
     height = figure_height_in * 72.0
-    plot_left = 35.0
-    plot_bottom = 29.0
-    plot_box = (plot_left, plot_bottom, width - plot_left - 10.0, height - plot_bottom - 50.0)
+    plot_margin = 22.0
+    plot_left = plot_margin
+    plot_bottom = plot_margin
+    plot_box = (plot_left, plot_bottom, width - plot_left - 8.0, height - plot_bottom - 35.0)
     x_bounds = (0.0, x_max)
     y_bounds = y_bounds or metric_bounds(series)
     x_min, x_max_value = x_bounds
@@ -493,14 +498,24 @@ def write_metric_pdf(
     content = []
     content.append(pdf_text(width / 2, height - 12, title, size=7.3, anchor="middle", bold=True))
 
-    legend_columns = 3
-    legend_column_width = plot_width / legend_columns
-    legend_y = height - 27
-    for index, label in enumerate(labels):
-        x = left + (index % legend_columns) * legend_column_width
-        y = legend_y - (index // legend_columns) * 10.5
-        content.append(pdf_line(x, y, x + 10, y, width=1.4, color=hex_to_rgb(COLORS.get(label, "#333333"))))
-        content.append(pdf_text(x + 13, y - 2.2, label, size=5.5))
+    legend_y = height - 25
+    legend_font_size = 5.0
+    legend_line_width = 12.0
+    legend_text_gap = 2.5
+    legend_item_gap = 8.0
+    legend_item_widths = [
+        legend_line_width + legend_text_gap + len(str(label)) * legend_font_size * 0.5 for label in labels
+    ]
+    legend_width = sum(legend_item_widths) + legend_item_gap * max(0, len(labels) - 1)
+    legend_x = max(2.0, width / 2 - legend_width / 2)
+    for label, item_width in zip(labels, legend_item_widths):
+        x = legend_x
+        y = legend_y
+        content.append(
+            pdf_line(x, y, x + legend_line_width, y, width=1.4, color=hex_to_rgb(COLORS.get(label, "#333333")))
+        )
+        content.append(pdf_text(x + legend_line_width + legend_text_gap, y - 2.0, label, size=legend_font_size))
+        legend_x += item_width + legend_item_gap
 
     grid_color = (0.88, 0.88, 0.88)
     for tick in range(6):
@@ -511,12 +526,14 @@ def write_metric_pdf(
         y_value = y_min + ratio * (y_max - y_min)
         content.append(pdf_line(x, bottom, x, bottom + plot_height, width=0.25, color=grid_color))
         content.append(pdf_line(left, y, left + plot_width, y, width=0.25, color=grid_color))
-        content.append(pdf_text(x, bottom - 10, f"{x_value:.0f}", size=5.3, anchor="middle"))
+        content.append(pdf_text(x, bottom - 8.5, f"{x_value:.0f}", size=5.3, anchor="middle"))
         content.append(pdf_text(left - 3.5, y - 1.8, f"{y_value:.1f}", size=5.3, anchor="end"))
 
     content.append(pdf_rect(left, bottom, plot_width, plot_height))
-    content.append(pdf_text(width / 2, 8.5, "Episode", size=6.3, anchor="middle"))
-    content.append(pdf_text(PDF_Y_LABEL_X, bottom + plot_height / 2, y_label, size=6.3, anchor="middle", angle=90))
+    content.append(pdf_text(width / 2, bottom - PDF_AXIS_LABEL_OFFSET, "Episode", size=6.3, anchor="middle"))
+    content.append(
+        pdf_text(left - PDF_AXIS_LABEL_OFFSET, bottom + plot_height / 2, y_label, size=6.3, anchor="middle", angle=90)
+    )
 
     for label in labels:
         if label not in series:
@@ -564,8 +581,20 @@ def write_metric_matplotlib(
     )
 
     handles, legend_labels = ax.get_legend_handles_labels()
-    fig.legend(handles, legend_labels, loc="upper center", ncol=min(3, len(legend_labels)), frameon=False, fontsize=6)
-    fig.tight_layout(rect=(0, 0, 1, 0.9))
+    fig.legend(
+        handles,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.995),
+        ncol=max(1, len(legend_labels)),
+        frameon=False,
+        fontsize=6,
+        handlelength=1.2,
+        handletextpad=0.35,
+        columnspacing=1.1,
+        borderaxespad=0.0,
+    )
+    fig.tight_layout(rect=(0.01, 0.02, 1, 0.86))
     fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
 
 

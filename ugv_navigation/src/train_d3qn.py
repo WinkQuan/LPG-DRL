@@ -83,10 +83,12 @@ for i_episode in range(total_episode + 1):
         rospy.sleep(0.1)
         next_state1, next_state2, terminal, reward, termination_state = gazebo_ugv.step(time_step=t + 1)
         current_episode_reward += reward
+        true_terminal = terminal and termination_state in ("arrival", "collision", "out")
+        dqn_done = true_terminal
 
         # 存入纯粹的 RL 经验
         action_index = [action_vx_index, action_vz_index]
-        agent.replay_buffer.add(state1, state2, action_index, reward, next_state1, next_state2, terminal)
+        agent.replay_buffer.add(state1, state2, action_index, reward, next_state1, next_state2, dqn_done)
 
         if terminal:
             if termination_state == "arrival":

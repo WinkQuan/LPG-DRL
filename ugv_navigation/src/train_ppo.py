@@ -26,6 +26,7 @@ wandb.init(project="OFF-ROAD-UGV", name="PPO_" + time.strftime("%Y-%m-%d %H:%M:%
 
 total_episode = 5000
 max_step_per_episode = 100
+rollout_steps = 1024
 
 model_path = "Model/PPO/"
 pth_path = model_path + "model.pth"
@@ -47,6 +48,9 @@ agent = ppo.PPO(
     update_epochs=4,
     max_grad_norm=0.5,
     learning_rate=1e-4,
+    target_kl=0.03,
+    use_value_clip=True,
+    normalize_state2=True,
 )
 
 ep_reward_list = []
@@ -56,10 +60,30 @@ ep_success_list = []
 print("Action Space_vx = ", gazebo_ugv.action_space_vx)
 print("Action Space_vz = ", gazebo_ugv.action_space_vz)
 
+
+def log_loss_info(loss_info, step):
+    if loss_info is None:
+        return
+
+    wandb.log(
+        {
+            "Loss_Policy": loss_info["policy_loss"],
+            "Loss_Value": loss_info["value_loss"],
+            "Entropy": loss_info["entropy"],
+            "Loss_Total": loss_info["total_loss"],
+            "Approx_KL": loss_info["approx_kl"],
+            "Clip_Fraction": loss_info["clip_fraction"],
+            "Explained_Variance": loss_info["explained_variance"],
+        },
+        step=step,
+    )
+
+
 for i_episode in range(total_episode + 1):
     state1, state2, dist_normalized = gazebo_ugv.reset()
     current_episode_reward = 0
     terminal = False
+    loss_info = None
 
     for t in range(max_step_per_episode):
         action_space_vx = gazebo_ugv.action_space_vx
@@ -72,6 +96,9 @@ for i_episode in range(total_episode + 1):
         rospy.sleep(0.1)
         next_state1, next_state2, terminal, reward, termination_state = gazebo_ugv.step(time_step=t + 1)
         current_episode_reward += reward
+        true_terminal = terminal and termination_state in ("arrival", "collision", "out")
+        timeout_truncated = terminal and termination_state == "timeout"
+        ppo_done = true_terminal
 
         agent.rollout_buffer.add(
             state1,
@@ -81,9 +108,20 @@ for i_episode in range(total_episode + 1):
             log_prob_vx,
             log_prob_vz,
             reward,
-            terminal,
+            ppo_done,
             value,
         )
+
+        if terminal:
+            bootstrap_value = agent.get_value(next_state1, next_state2) if timeout_truncated else 0.0
+            agent.rollout_buffer.finish_path(bootstrap_value)
+
+        if len(agent.rollout_buffer) >= rollout_steps:
+            rollout_next_value = 0.0
+            if not terminal:
+                rollout_next_value = agent.get_value(next_state1, next_state2)
+                agent.rollout_buffer.finish_path(rollout_next_value)
+            loss_info = agent.learn(next_value=rollout_next_value)
 
         if terminal:
             if termination_state == "arrival":
@@ -94,9 +132,6 @@ for i_episode in range(total_episode + 1):
 
         state1 = next_state1
         state2 = next_state2
-
-    next_value = 0.0 if terminal else agent.get_value(state1, state2)
-    loss_info = agent.learn(next_value=next_value)
 
     ep_reward_list.append(current_episode_reward)
     ep_step_list.append(t + 1)
@@ -114,16 +149,7 @@ for i_episode in range(total_episode + 1):
     wandb.log({"Reward": current_episode_reward}, step=i_episode)
     wandb.log({"Step": t + 1}, step=i_episode)
     wandb.log({"Success Rate": success_rate}, step=i_episode)
-    if loss_info is not None:
-        wandb.log(
-            {
-                "Loss_Policy": loss_info["policy_loss"],
-                "Loss_Value": loss_info["value_loss"],
-                "Entropy": loss_info["entropy"],
-                "Loss_Total": loss_info["total_loss"],
-            },
-            step=i_episode,
-        )
+    log_loss_info(loss_info, step=i_episode)
 
     reward_file_path = model_path + "Reward"
     step_file_path = model_path + "Step"
@@ -150,3 +176,11 @@ for i_episode in range(total_episode + 1):
         agent.save_onnx_model(onnx_path)
         onnx_file_name = "Model_" + time.strftime("%Y-%m-%d") + f"_{i_episode + 1}.onnx"
         agent.save_onnx_model(model_path + onnx_file_name)
+
+if len(agent.rollout_buffer) > 0:
+    agent.rollout_buffer.finish_path(0.0)
+    final_loss_info = agent.learn(next_value=0.0)
+    log_loss_info(final_loss_info, step=total_episode + 1)
+
+agent.save_model(pth_path)
+agent.save_onnx_model(onnx_path)

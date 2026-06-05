@@ -101,6 +101,12 @@
 			<pose>0 0 1 0 0 0</pose>
 			<uri>model://mycar</uri>
 		</include>
+		<!-- Fixed top-down camera for recording overhead validation videos. -->
+		<include>
+			<name>top_down_camera</name>
+			<pose>0 0 75.8 0 1.57079632679 0</pose>
+			<uri>model://top_down_camera</uri>
+		</include>
 		<!-- 目标点：一颗树 -->
 		<include>
 			<name>Oak tree</name>

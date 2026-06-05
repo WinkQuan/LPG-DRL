@@ -17,13 +17,17 @@ from pathlib import Path
 import algorithm_comparison
 import validation_scenes
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
-REQUIRED_GAZEBO_TOPICS = ["/gazebo/model_states", "/mycar/camera_right/image_raw_right"]
+REQUIRED_GAZEBO_TOPICS = [
+    "/gazebo/model_states",
+    "/mycar/camera_right/image_raw_right",
+    "/top_down_camera/image_raw",
+]
 MODEL_PATHS = {
     "LPG-DRL": Path("./Model/LPG-DRL/model_lpg_drl.onnx"),
     "NPE-DRL": Path("./Model/NPE-DRL/model_npe_drl.onnx"),
     "D3QN": Path("./Model/D3QN/model_d3qn.onnx"),
+    "D3QN-LfD": Path("./Model/D3QN-LfD/model_d3qn_lfd.onnx"),
     "PPO": Path("./Model/PPO/model_ppo.onnx"),
     "BC": Path("./Model/BC/model_bc.onnx"),
     "DAgger": Path("./Model/DAgger/model_dagger.onnx"),
@@ -309,7 +313,9 @@ def run_validations(args, specs, scene, log_dir):
         maybe_backup_validation(spec, scene, log_dir, args.dry_run)
 
         if args.dry_run:
-            print(f"[DRY-RUN] Would run validation: {validation_scenes.ENV_VAR}={scene} {display_command(validate_cmd)}")
+            print(
+                f"[DRY-RUN] Would run validation: {validation_scenes.ENV_VAR}={scene} {display_command(validate_cmd)}"
+            )
             continue
 
         try:

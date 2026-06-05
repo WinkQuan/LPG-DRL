@@ -14,6 +14,7 @@ METRIC_COLUMNS = [
     "success_rate_pct",
     "collision_rate_pct",
     "timeout_rate_pct",
+    "out_of_bounds_rate_pct",
     "average_step",
     "average_trajectory_length_m",
     "average_energy_consumption_j",
@@ -28,6 +29,8 @@ SUMMARY_COLUMNS = [
     "cr_std",
     "tr_mean",
     "tr_std",
+    "obr_mean",
+    "obr_std",
     "as_mean",
     "as_std",
     "atl_mean",
@@ -74,16 +77,17 @@ def write_summary_csv(rows, output_path):
 
 
 def write_summary_markdown(rows, output_path):
-    header = "| Method | SR (%) | CR (%) | TR (%) | AS | ATL (m) | AEC (J) | APS (rad) | AET (s) |\n"
-    separator = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+    header = "| Method | SR (%) | CR (%) | TR (%) | OBR (%) | AS | ATL (m) | AEC (J) | APS (rad) | AET (s) |\n"
+    separator = "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     lines = [header, separator]
     for row in rows:
         lines.append(
-            "| {method} | {sr} | {cr} | {tr} | {as_} | {atl} | {aec} | {aps} | {aet} |\n".format(
+            "| {method} | {sr} | {cr} | {tr} | {obr} | {as_} | {atl} | {aec} | {aps} | {aet} |\n".format(
                 method=row["method"],
                 sr=format_mean_std(row["sr_mean"], row["sr_std"]),
                 cr=format_mean_std(row["cr_mean"], row["cr_std"]),
                 tr=format_mean_std(row["tr_mean"], row["tr_std"]),
+                obr=format_mean_std(row["obr_mean"], row["obr_std"]),
                 as_=format_mean_std(row["as_mean"], row["as_std"]),
                 atl=format_mean_std(row["atl_mean"], row["atl_std"]),
                 aec=format_mean_std(row["aec_mean"], row["aec_std"]),
@@ -96,14 +100,15 @@ def write_summary_markdown(rows, output_path):
 
 
 def print_table(rows):
-    print("Method                          SR (%)         CR (%)         TR (%)         AS             ATL (m)        AEC (J)        APS (rad)      AET (s)")
-    print("------------------------------  -------------  -------------  -------------  -------------  -------------  -------------  -------------  -------------")
+    print("Method                          SR (%)         CR (%)         TR (%)         OBR (%)        AS             ATL (m)        AEC (J)        APS (rad)      AET (s)")
+    print("------------------------------  -------------  -------------  -------------  -------------  -------------  -------------  -------------  -------------  -------------")
     for row in rows:
         print(
             f"{row['method']:<30}  "
             f"{format_mean_std(row['sr_mean'], row['sr_std']):<13}  "
             f"{format_mean_std(row['cr_mean'], row['cr_std']):<13}  "
             f"{format_mean_std(row['tr_mean'], row['tr_std']):<13}  "
+            f"{format_mean_std(row['obr_mean'], row['obr_std']):<13}  "
             f"{format_mean_std(row['as_mean'], row['as_std']):<13}  "
             f"{format_mean_std(row['atl_mean'], row['atl_std']):<13}  "
             f"{format_mean_std(row['aec_mean'], row['aec_std']):<13}  "
@@ -140,6 +145,8 @@ def main():
                 "cr_std": float(np.std(metric_values["collision_rate_pct"])),
                 "tr_mean": float(np.mean(metric_values["timeout_rate_pct"])),
                 "tr_std": float(np.std(metric_values["timeout_rate_pct"])),
+                "obr_mean": float(np.mean(metric_values["out_of_bounds_rate_pct"])),
+                "obr_std": float(np.std(metric_values["out_of_bounds_rate_pct"])),
                 "as_mean": float(np.mean(metric_values["average_step"])),
                 "as_std": float(np.std(metric_values["average_step"])),
                 "atl_mean": float(np.mean(metric_values["average_trajectory_length_m"])),

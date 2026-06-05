@@ -65,6 +65,7 @@
 | `SR` | Success Rate | 成功率，越高越好 |
 | `CR` | Collision Rate | 碰撞率，越低越好 |
 | `TR` | Timeout Rate | 超时率，越低越好 |
+| `OBR` | Out-of-Bounds Rate | 出界率，越低越好 |
 | `AS` | Average Step | 平均步数，越低越好 |
 | `ATL` | Average Trajectory Length | 平均轨迹长度，越低越好 |
 | `AEC` | Average Energy Consumption | 平均能耗，越低越好 |
@@ -75,13 +76,13 @@
 
 ### Markdown 结果表模板
 
-| Method | SR (%) | CR (%) | TR (%) | AS | ATL (m) | AEC (J) | APS (rad) | AET (s) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| LPG-DRL | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| LPG-DRL w/o Dropout | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| LPG-DRL w/o Local APF Teacher | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| LPG-DRL w/o Posture-Aware Reward | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
-| LPG-DRL w/o Exploration | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| Method | SR (%) | CR (%) | TR (%) | OBR (%) | AS | ATL (m) | AEC (J) | APS (rad) | AET (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| LPG-DRL | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Dropout | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Local APF Teacher | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Posture-Aware Reward | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
+| LPG-DRL w/o Exploration | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` | `-- ± --` |
 
 ### LaTeX 结果表模板
 
@@ -91,15 +92,15 @@
 \caption{Ablation study of LPG-DRL.}
 \label{tab:ablation_lpgdrl}
 \resizebox{\textwidth}{!}{
-\begin{tabular}{lcccccccc}
+\begin{tabular}{lccccccccc}
 \toprule
-Method & SR (\%) & CR (\%) & TR (\%) & AS & ATL (m) & AEC (J) & APS (rad) & AET (s) \\
+Method & SR (\%) & CR (\%) & TR (\%) & OBR (\%) & AS & ATL (m) & AEC (J) & APS (rad) & AET (s) \\
 \midrule
-LPG-DRL & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-LPG-DRL w/o Dropout & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-LPG-DRL w/o Local APF Teacher & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-LPG-DRL w/o Posture-Aware Reward & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
-LPG-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Dropout & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Local APF Teacher & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Posture-Aware Reward & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
+LPG-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- \\
 \bottomrule
 \end{tabular}
 }
@@ -114,7 +115,7 @@ LPG-DRL w/o Exploration & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- & -- $\pm$ -- 
 
 ### 6.2 消融实验结果
 
-表 \ref{tab:ablation_lpgdrl} 给出了 `LPG-DRL` 及其四个消融版本在 `SR`、`CR`、`TR`、`AS`、`ATL`、`AEC`、`APS` 和 `AET` 八项指标上的结果。整体来看，完整 `LPG-DRL` 在各项指标上表现最优或最均衡，说明所提出的各个模块均对最终性能提升起到了积极作用。
+表 \ref{tab:ablation_lpgdrl} 给出了 `LPG-DRL` 及其四个消融版本在 `SR`、`CR`、`TR`、`OBR`、`AS`、`ATL`、`AEC`、`APS` 和 `AET` 九项指标上的结果。整体来看，完整 `LPG-DRL` 在各项指标上表现最优或最均衡，说明所提出的各个模块均对最终性能提升起到了积极作用。
 
 ### 6.3 结果分析
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
-Compare real validation metrics across LPG-DRL, NPE-DRL, D3QN, PPO, BC, DAgger, and APF.
+Compare real validation metrics across LPG-DRL, NPE-DRL, D3QN, D3QN-LfD, PPO, BC, DAgger, and APF.
 """
 
 import csv
@@ -23,6 +23,11 @@ ALGORITHM_SPECS = [
         "algorithm": "D3QN",
         "metrics_path": Path("./Validate/D3QN/metrics.csv"),
         "validate_cmd": "python validate_d3qn.py",
+    },
+    {
+        "algorithm": "D3QN-LfD",
+        "metrics_path": Path("./Validate/D3QN-LfD/metrics.csv"),
+        "validate_cmd": "python validate_d3qn_lfd.py",
     },
     {
         "algorithm": "PPO",
@@ -51,6 +56,7 @@ RESULT_COLUMNS = [
     "success_rate_pct",
     "collision_rate_pct",
     "timeout_rate_pct",
+    "out_of_bounds_rate_pct",
     "average_step",
     "average_trajectory_length_m",
     "average_energy_consumption_j",
@@ -64,6 +70,7 @@ ROUND_COLUMNS = {
     "success_rate_pct": 2,
     "collision_rate_pct": 2,
     "timeout_rate_pct": 2,
+    "out_of_bounds_rate_pct": 2,
     "average_step": 2,
     "average_trajectory_length_m": 4,
     "average_energy_consumption_j": 4,
@@ -72,6 +79,18 @@ ROUND_COLUMNS = {
 }
 
 INT_COLUMNS = {"max_episode", "max_step_per_episode"}
+
+DISPLAY_COLUMNS = {
+    "success_rate_pct": "SR (%)",
+    "collision_rate_pct": "CR (%)",
+    "timeout_rate_pct": "TR (%)",
+    "out_of_bounds_rate_pct": "OBR (%)",
+    "average_step": "AS",
+    "average_trajectory_length_m": "ATL (m)",
+    "average_energy_consumption_j": "AEC (J)",
+    "average_posture_stability_rad": "APS (rad)",
+    "average_execution_time_s": "AET (s)",
+}
 
 
 def load_metrics(spec):
@@ -127,10 +146,14 @@ def print_table(rows):
         string_rows.append(string_row)
 
     column_widths = {
-        column: max(len(column), max(len(row[column]) for row in string_rows)) for column in RESULT_COLUMNS
+        column: max(
+            len(DISPLAY_COLUMNS.get(column, column)),
+            max(len(row[column]) for row in string_rows),
+        )
+        for column in RESULT_COLUMNS
     }
 
-    header = "  ".join(column.ljust(column_widths[column]) for column in RESULT_COLUMNS)
+    header = "  ".join(DISPLAY_COLUMNS.get(column, column).ljust(column_widths[column]) for column in RESULT_COLUMNS)
     separator = "  ".join("-" * column_widths[column] for column in RESULT_COLUMNS)
     print(header)
     print(separator)
@@ -167,7 +190,7 @@ def main():
     print("Algorithm Comparison Based on Validation Metrics")
     print("=" * 100)
     print("Metrics:")
-    print("  success_rate_pct, collision_rate_pct, timeout_rate_pct")
+    print("  success_rate_pct, collision_rate_pct, timeout_rate_pct, out_of_bounds_rate_pct")
     print("  average_step, average_trajectory_length_m, average_energy_consumption_j")
     print("  average_posture_stability_rad, average_execution_time_s")
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Validation script for BC (Behavior Cloning) algorithm
-Tests the trained BC model with all 8 evaluation metrics
+Tests the trained BC model with all 9 evaluation metrics
 """
 
 import csv
@@ -13,6 +13,7 @@ import numpy as np
 import time
 import env
 import onnxruntime as ort
+import validation_episode_recorder
 import validation_scenes
 
 max_step_per_episode = 100
@@ -20,6 +21,7 @@ max_episode = 500
 success_count = 0
 collision_count = 0
 timeout_count = 0
+out_count = 0
 step_count = 0
 total_trajectory_length = 0.0
 total_energy_consumption = 0.0
@@ -39,6 +41,8 @@ csv_path = validate_dir / "BC_velocity.csv"
 tra_path = validate_dir / "BC_trajectory.txt"
 metrics_path = validate_dir / "metrics.csv"
 validate_dir.mkdir(parents=True, exist_ok=True)
+episode_recorder = validation_episode_recorder.FirstSuccessEpisodeRecorder(scene, "BC", validate_dir)
+validation_episode_recorder.remove_stale_outputs(csv_path, tra_path)
 
 if not model.exists():
     raise FileNotFoundError(
@@ -74,7 +78,9 @@ print(f"Using ONNX model: {model}")
 print(f"Output directory: {validate_dir}")
 
 for i in range(max_episode):
+    episode_recorder.start_episode(i + 1)
     state1, state2, dist_normalized = gazebo_ugv.reset()
+    episode_recorder.mark_episode_start_from_next_image()
     print(f"Episode {i+1}/{max_episode}: dist_normalized = {dist_normalized:.3f}")
     rospy.sleep(0.1)
     episode_start_time = time.time()
@@ -126,8 +132,9 @@ for i in range(max_episode):
 
         if terminal:
             if termination_state == "arrival":
-                np.savetxt(str(tra_path), ugv_pos_list)
-                write_velocity_csv(csv_path, linear_x_values, angular_z_values)
+                if not episode_recorder.has_saved_success:
+                    np.savetxt(str(tra_path), ugv_pos_list)
+                    write_velocity_csv(csv_path, linear_x_values, angular_z_values)
                 success_count += 1
                 step_count += t + 1
                 total_trajectory_length += episode_trajectory_length
@@ -145,14 +152,18 @@ for i in range(max_episode):
                 timeout_count += 1
                 print(f"  ⏱ Timeout!")
             elif termination_state == "out":
+                out_count += 1
                 print("  ✗ Out of bounds!")
+            episode_recorder.finish_episode(success=termination_state == "arrival")
             break
         state1 = next_state1
         state2 = next_state2
+    episode_recorder.finish_episode(success=False)
 
 success_rate = success_count / max_episode
 collision_rate = collision_count / max_episode
 timeout_rate = timeout_count / max_episode
+out_of_bounds_rate = out_count / max_episode
 
 if success_count > 0:
     average_step = step_count / success_count
@@ -175,12 +186,14 @@ print("=" * 50)
 print(f"Success Rate: {success_rate*100:.2f}%")
 print(f"Collision Rate: {collision_rate*100:.2f}%")
 print(f"Timeout Rate: {timeout_rate*100:.2f}%")
+print(f"Out-of-bounds Rate: {out_of_bounds_rate*100:.2f}%")
 print(f"Average Time Step: {average_step:.0f}")
 print(f"Average Trajectory Length: {average_trajectory_length:.2f} m")
 print(f"Average Energy Consumption: {average_energy_consumption:.2f} J")
 print(f"Average Posture Stability: {average_posture_stability:.4f} rad")
 print(f"Average Execution Time: {average_execution_time:.3f} s")
 print("=" * 50)
+episode_recorder.print_summary()
 
 write_dict_csv(
     metrics_path,
@@ -189,6 +202,7 @@ write_dict_csv(
         "success_rate_pct",
         "collision_rate_pct",
         "timeout_rate_pct",
+        "out_of_bounds_rate_pct",
         "average_step",
         "average_trajectory_length_m",
         "average_energy_consumption_j",
@@ -202,6 +216,7 @@ write_dict_csv(
         "success_rate_pct": success_rate * 100,
         "collision_rate_pct": collision_rate * 100,
         "timeout_rate_pct": timeout_rate * 100,
+        "out_of_bounds_rate_pct": out_of_bounds_rate * 100,
         "average_step": average_step,
         "average_trajectory_length_m": average_trajectory_length,
         "average_energy_consumption_j": average_energy_consumption,

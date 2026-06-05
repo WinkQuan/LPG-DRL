@@ -131,6 +131,7 @@ python algorithm_comparison.py
 ```
 
 Each validation script writes `metrics.csv` to `Validate/<Algorithm>/`.
+The rate metrics are `SR (%)`, `CR (%)`, `TR (%)`, and `OBR (%)` for success, collision, timeout, and out-of-bounds rates.
 
 `algorithm_comparison.py` aggregates validation metrics from:
 
